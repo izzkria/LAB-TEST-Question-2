@@ -1,10 +1,9 @@
-
 import json
 import operator
 
-# ----------------------------
-# Rule Engine
-# ----------------------------
+# ==========================================
+# 1. RULE ENGINE
+# ==========================================
 
 OPS = {
     "==": operator.eq,
@@ -29,11 +28,13 @@ def rule_matches(facts, rule):
 
 
 def run_rules(facts, rules):
+
     fired = [
         rule for rule in rules
         if rule_matches(facts, rule)
     ]
 
+    # Sort matched rules according to priority
     fired_sorted = sorted(
         fired,
         key=lambda rule: rule["priority"],
@@ -46,26 +47,14 @@ def run_rules(facts, rules):
     return fired_sorted[0]["action"], fired_sorted
 
 
-# ----------------------------
-# Define Rules (JSON)
-# ----------------------------
+# ==========================================
+# 2. LOAD JSON RULES
+# ==========================================
 
 rules_json = """
 [
     {
-        "priority": 1,
-        "conditions": [
-            ["occupancy", "==", "UNOCCUPIED"]
-        ],
-        "action": {
-            "ac_mode": "OFF",
-            "fan_speed": "OFF",
-            "setpoint": 0,
-            "reason": "Room is unoccupied."
-        }
-    },
-    {
-        "priority": 2,
+        "priority": 100,
         "conditions": [
             ["windows_open", "==", true]
         ],
@@ -73,24 +62,35 @@ rules_json = """
             "ac_mode": "OFF",
             "fan_speed": "OFF",
             "setpoint": 0,
-            "reason": "Windows are open."
+            "reason": "Windows are open"
         }
     },
     {
-        "priority": 3,
+        "priority": 90,
         "conditions": [
-            ["temperature", ">=", 28],
-            ["occupancy", "==", "OCCUPIED"]
+            ["occupancy", "==", "UNOCCUPIED"]
+        ],
+        "action": {
+            "ac_mode": "OFF",
+            "fan_speed": "OFF",
+            "setpoint": 0,
+            "reason": "Room is unoccupied"
+        }
+    },
+    {
+        "priority": 80,
+        "conditions": [
+            ["temperature", ">=", 26]
         ],
         "action": {
             "ac_mode": "COOL",
             "fan_speed": "HIGH",
-            "setpoint": 22,
-            "reason": "High temperature detected."
+            "setpoint": 23,
+            "reason": "Temperature is high"
         }
     },
     {
-        "priority": 4,
+        "priority": 70,
         "conditions": [
             ["temperature", ">=", 24],
             ["occupancy", "==", "OCCUPIED"]
@@ -99,20 +99,20 @@ rules_json = """
             "ac_mode": "COOL",
             "fan_speed": "MEDIUM",
             "setpoint": 24,
-            "reason": "Moderate temperature detected."
+            "reason": "Room temperature is moderately high"
         }
     },
     {
-        "priority": 5,
+        "priority": 50,
         "conditions": [
-            ["temperature", "<", 24],
-            ["occupancy", "==", "OCCUPIED"]
+            ["occupancy", "==", "OCCUPIED"],
+            ["temperature", "<", 24]
         ],
         "action": {
-            "ac_mode": "ECO",
+            "ac_mode": "AUTO",
             "fan_speed": "LOW",
-            "setpoint": 26,
-            "reason": "Room temperature is comfortable."
+            "setpoint": 24,
+            "reason": "Comfortable room temperature"
         }
     }
 ]
@@ -121,9 +121,9 @@ rules_json = """
 rules = json.loads(rules_json)
 
 
-# ----------------------------
-# Given Home Conditions
-# ----------------------------
+# ==========================================
+# 3. GIVEN HOME CONDITIONS
+# ==========================================
 
 facts = {
     "temperature": 22,
@@ -134,37 +134,51 @@ facts = {
 }
 
 
-# ----------------------------
-# Run Rule Engine
-# ----------------------------
+# ==========================================
+# 4. RUN RULE ENGINE
+# ==========================================
 
 final_action, matched_rules = run_rules(facts, rules)
 
 
-# ----------------------------
-# Display Results
-# ----------------------------
+# ==========================================
+# 5. DISPLAY RESULTS
+# ==========================================
 
-print("=" * 40)
-print("       FINAL AC DECISION")
-print("=" * 40)
+print("=" * 45)
+print("       SMART HOME AC CONTROL SYSTEM")
+print("=" * 45)
 
-if final_action:
+print("\nHOME CONDITIONS")
+print("-" * 45)
 
-    print("AC Mode:", final_action["ac_mode"])
-    print("Fan Speed:", final_action["fan_speed"])
-    print("Setpoint:", final_action["setpoint"])
-    print("Reason:", final_action["reason"])
+for key, value in facts.items():
+    print(f"{key.replace('_', ' ').title():<20}: {value}")
 
-    print("\nMatched Rules:")
+print("\nRULE ENGINE RESULTS")
+print("-" * 45)
+
+if final_action is not None:
+
+    print("Matched Rules:", len(matched_rules))
 
     for rule in matched_rules:
         print(
-            "Priority:",
-            rule["priority"],
-            "| Action:",
-            rule["action"]["ac_mode"]
+            f"Priority {rule['priority']}: "
+            f"{rule['action']['reason']}"
         )
 
+    print("\nFINAL AC DECISION")
+    print("-" * 45)
+
+    print("AC Mode   :", final_action["ac_mode"])
+    print("Fan Speed :", final_action["fan_speed"])
+    print("Setpoint  :", f"{final_action['setpoint']}°C")
+    print("Reason    :", final_action["reason"])
+
 else:
+
     print("No matching rules found.")
+    print("Please check the home conditions and rules.")
+
+print("\n" + "=" * 45)
